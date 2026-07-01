@@ -1,5 +1,3 @@
-</> Python
-
 from collections import defaultdict
 from polymarket import get_user_positions, normalize_positions
 
