@@ -1,0 +1,47 @@
+</> Python
+
+import requests
+
+# Polymarket API base (public endpoints)
+BASE_URL = "https://clob.polymarket.com"
+
+def get_user_positions(wallet_address: str):
+    """
+    Fetch current open positions for a Polymarket wallet.
+    """
+    url = f"{BASE_URL}/positions"
+    
+    params = {
+        "user": wallet_address
+    }
+
+    try:
+        r = requests.get(url, params=params, timeout=20)
+        r.raise_for_status()
+        data = r.json()
+
+        return data.get("positions", [])
+
+    except Exception as e:
+        print(f"Error fetching wallet {wallet_address}: {e}")
+        return []
+
+
+def normalize_positions(raw_positions):
+    """
+    Convert Polymarket response into simple format:
+    {market, side, size}
+    """
+    cleaned = []
+
+    for p in raw_positions:
+        try:
+            cleaned.append({
+                "market": p.get("market", "Unknown Market"),
+                "side": p.get("side", "UNKNOWN"),  # YES / NO
+                "size": float(p.get("size", 0))
+            })
+        except:
+            continue
+
+    return cleaned
