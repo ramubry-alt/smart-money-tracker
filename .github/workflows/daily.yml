@@ -1,8 +1,6 @@
 name: Smart Money Daily Email
 
 on:
-  schedule:
-    - cron: "0 12 * * *"  # 7 AM Eastern (approx UTC)
   workflow_dispatch:
 
 jobs:
@@ -11,14 +9,3 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run app
-        run: python app.py
