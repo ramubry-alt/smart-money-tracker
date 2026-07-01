@@ -1,6 +1,6 @@
-name: Smart Money Daily Email
+name: Smart Money Email
 
-on:
+on: 
   workflow_dispatch:
 
 jobs:
@@ -8,5 +8,5 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checout@v3
