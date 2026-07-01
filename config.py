@@ -1,9 +1,9 @@
 </> Python
 
-EMAIL_FROM = "jzck zcwj qcnb ydos"
+EMAIL_FROM = "ramubry@gmail.com"
 EMAIL_TO = "ramubry@gmail.com"
 
-EMAIL_APP_PASSWORD = "PASTE_YOUR_APP_PASSWORD_HERE"
+EMAIL_APP_PASSWORD = "jzck zcwj qcnb ydos"
 
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
