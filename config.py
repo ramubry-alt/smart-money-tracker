@@ -1,5 +1,3 @@
-</> Python
-
 EMAIL_FROM = "ramubry@gmail.com"
 EMAIL_TO = "ramubry@gmail.com"
 
