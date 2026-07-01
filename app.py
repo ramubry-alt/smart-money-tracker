@@ -36,3 +36,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+if __name__ == "__main__":
+    print("Running Smart Money Tracker...")
+
+    result = get_top_consensus()
+
+    print("Consensus result:")
+    print(result)
