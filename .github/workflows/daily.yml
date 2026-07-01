@@ -1,4 +1,4 @@
-name: Smart Money Email
+name: Smart Money Daily Email
 
 on: 
   workflow_dispatch:
