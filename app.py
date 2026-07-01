@@ -1,5 +1,3 @@
-</> Python
-
 from wallets import WALLETS_5, TOP_25
 from consensus import get_top_consensus
 from emailer import send_email
