@@ -39,7 +39,9 @@ if __name__ == "__main__":
 if __name__ == "__main__":
     print("Running Smart Money Tracker...")
 
-    result = get_top_consensus()
+from wallets import WALLETS_5, TOP_25
 
-    print("Consensus result:")
-    print(result)
+five, top25 = get_top_consensus(WALLETS_5, TOP_25)
+
+print("5 Wallet Consensus:", five)
+print("Top 25 Consensus:", top25)
