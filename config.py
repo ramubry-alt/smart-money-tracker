@@ -1,6 +1,6 @@
 </> Python
 
-EMAIL_FROM = "YOUR_GMAIL@gmail.com"
+EMAIL_FROM = "jzck zcwj qcnb ydos"
 EMAIL_TO = "ramubry@gmail.com"
 
 EMAIL_APP_PASSWORD = "PASTE_YOUR_APP_PASSWORD_HERE"
