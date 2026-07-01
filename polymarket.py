@@ -2,10 +2,11 @@
 # (We will upgrade this to real API logic next)
 
 def get_user_positions(wallet_address):
-    """
-    Mock function returning empty positions for now.
-    """
-    return []
+    return [
+        {"market": "BTC > 100k by 2026", "side": "YES", "size": 120},
+        {"market": "ETH ETF approved", "side": "YES", "size": 80},
+        {"market": "US recession 2026", "side": "NO", "size": 50}
+    ]
 
 
 def normalize_positions(raw_positions):
