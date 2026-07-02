@@ -21,16 +21,18 @@ def compute_consensus(positions, wallet_count):
     markets = defaultdict(lambda: {
         "YES": set(),
         "NO": set(),
-        "wallets": set()
+        "wallets": set(),
+        "size": 0
     })
 
     for p in positions:
-        market = p["market"]
+        market = p["market"].strip()
         side = p["side"]
         wallet = p["wallet"]
 
         markets[market][side].add(wallet)
         markets[market]["wallets"].add(wallet)
+        markets[market]["size"] += p.get("size", 0)
 
     results = []
 
@@ -39,12 +41,20 @@ def compute_consensus(positions, wallet_count):
         no_count = len(data["NO"])
         total_wallets = len(data["wallets"])
 
+        # avoid zero division safety
+        if wallet_count == 0:
+            continue
+
         if yes_count >= no_count:
             direction = "YES"
+            base_strength = yes_count / wallet_count
         else:
             direction = "NO"
+            base_strength = no_count / wallet_count
 
-        strength = (max(yes_count, no_count) / wallet_count) * 100
+        # improved scoring: reward breadth + participation
+        breadth = total_wallets / wallet_count
+        strength = (base_strength * 0.7 + breadth * 0.3) * 100
 
         results.append({
             "market": market,
@@ -55,9 +65,19 @@ def compute_consensus(positions, wallet_count):
             "strength": round(strength, 1)
         })
 
-    results.sort(key=lambda x: x["strength"], reverse=True)
+    # ---------------------------
+    # DEDUP + FINAL SORT
+    # ---------------------------
+    seen = set()
+    unique_results = []
 
-    return results
+    for r in sorted(results, key=lambda x: x["strength"], reverse=True):
+        if r["market"] in seen:
+            continue
+        seen.add(r["market"])
+        unique_results.append(r)
+
+    return unique_results
 
 
 def get_top_consensus(wallets_5, wallets_25):
