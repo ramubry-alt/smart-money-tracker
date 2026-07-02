@@ -21,8 +21,9 @@ def normalize_positions(raw):
 
     for item in raw:
         market = item.get("title") or item.get("question") or ""
-        if any(x in market for x in ["2020", "2021", "2022"]):
-    continue
+
+        if any(year in market for year in ["2020", "2021", "2022"]):
+            continue
     try:
             market = (
                 item.get("title")
