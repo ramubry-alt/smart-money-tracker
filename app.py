@@ -8,9 +8,15 @@ from emailer import send_email
 
 
 def format_report(five, top25):
-    lines = []
+    prev = load_previous()
+changes_section = build_changes(five, top25, prev)
 
-    lines.append("SMART MONEY DAILY REPORT\n")
+lines = []
+
+lines.append("SMART MONEY DAILY REPORT\n")
+
+lines.append(changes_section)
+lines.append("")
 
     lines.append("⭐⭐⭐⭐⭐ 5-WALLET CONSENSUS\n")
 
