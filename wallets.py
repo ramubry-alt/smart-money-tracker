@@ -34,4 +34,3 @@ TOP_25 = [
     "0x4bff30af91642dc7d2b19a8664378fe55c45fc26",
     # add more wallets here until you reach 25 total
 ]
-0xc41d736bded9ed1accd6a44235039266219774fd
