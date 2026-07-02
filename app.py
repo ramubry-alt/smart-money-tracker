@@ -11,17 +11,16 @@ def format_report(five, top25):
     lines.append("🔥 NEW SINCE YESTERDAY\n")
     lines.append("No changes tracked in this version.\n")
 
-    lines.append("⭐⭐⭐⭐⭐ 5-WALLET CONSENSUS\n")
+    # merge + rank everything
+    all_signals = five + top25
+    all_signals.sort(key=lambda x: x["strength"], reverse=True)
 
-    for m in five[:10]:
-        if m["strength"] >= 80:
-            lines.append(f"{m['market']} → {m['direction']} ({m['yes_count']}/5 wallets)")
+    top5 = all_signals[:5]
 
-    lines.append("\n⭐⭐⭐⭐ TOP 25 CONSENSUS\n")
+    lines.append("⭐⭐⭐⭐⭐ TOP 5 CONVICTION SIGNALS\n")
 
-    for m in top25[:15]:
-        if m["strength"] >= 60:
-            lines.append(f"{m['market']} → {m['direction']} ({m['yes_count']}/25 wallets)")
+    for m in top5:
+        lines.append(f"{m['market']} → {m['direction']} ({m['strength']}%)")
 
     return "\n".join(lines)
 
