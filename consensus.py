@@ -3,6 +3,19 @@ import re
 from polymarket import get_user_positions, normalize_positions
 
 
+# ---------------------------
+# MARKET NORMALIZATION
+# ---------------------------
+def normalize_market_name(market):
+    market = market.lower().strip()
+    market = re.sub(r"[^a-z0-9\s]", "", market)
+    market = re.sub(r"\s+", " ", market)
+    return market
+
+
+# ---------------------------
+# WALLET SNAPSHOT
+# ---------------------------
 def build_wallet_snapshot(wallets):
     all_positions = []
 
@@ -17,28 +30,13 @@ def build_wallet_snapshot(wallets):
     return all_positions
 
 
-def normalize_market_name(market):
-    """
-    Strong canonicalization to prevent duplicates.
-    """
-    market = market.lower().strip()
-
-    # remove punctuation
-    market = re.sub(r"[^a-z0-9\s]", "", market)
-
-    # normalize whitespace
-    market = re.sub(r"\s+", " ", market)
-
-    return market
-
-
+# ---------------------------
+# CORE CONSENSUS ENGINE
+# ---------------------------
 def compute_consensus(positions, wallet_count):
-    markets = defaultdict(lambda: {
-        "YES": set(),
-        "NO": set(),
-        "wallets": set(),
-        "size": 0
-    })
+
+    # FIRST LEVEL: strict canonical aggregation
+    markets = {}
 
     for p in positions:
         raw_market = p.get("market", "")
@@ -47,10 +45,19 @@ def compute_consensus(positions, wallet_count):
         side = p.get("side", "YES").upper()
         wallet = p.get("wallet")
 
+        if market not in markets:
+            markets[market] = {
+                "YES": set(),
+                "NO": set(),
+                "wallets": set(),
+                "size": 0
+            }
+
         markets[market][side].add(wallet)
         markets[market]["wallets"].add(wallet)
         markets[market]["size"] += float(p.get("size", 0) or 0)
 
+    # SECOND LEVEL: scoring
     results = []
 
     for market, data in markets.items():
@@ -63,10 +70,14 @@ def compute_consensus(positions, wallet_count):
 
         direction = "YES" if yes_count >= no_count else "NO"
 
-        confidence = max(yes_count, no_count) / wallet_count
-        breadth = total_wallets / wallet_count
+        # more realistic scoring spread
+        agreement = max(yes_count, no_count) / wallet_count
+        participation = total_wallets / wallet_count
 
-        strength = (confidence * 0.6 + breadth * 0.4) * 100
+        strength = (
+            (agreement * 0.65) +
+            (participation * 0.35)
+        ) * 100
 
         results.append({
             "market": market,
@@ -77,23 +88,17 @@ def compute_consensus(positions, wallet_count):
             "strength": round(strength, 1)
         })
 
-    # sort by strength
+    # sort
     results.sort(key=lambda x: x["strength"], reverse=True)
 
-    # final dedup safety pass
-    seen = set()
-    unique_results = []
-
-    for r in results:
-        if r["market"] in seen:
-            continue
-        seen.add(r["market"])
-        unique_results.append(r)
-
-    return unique_results
+    return results
 
 
+# ---------------------------
+# ENTRY POINT
+# ---------------------------
 def get_top_consensus(wallets_5, wallets_25):
+
     five_positions = build_wallet_snapshot(wallets_5)
     top_positions = build_wallet_snapshot(wallets_25)
 
