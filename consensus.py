@@ -3,9 +3,6 @@ from polymarket import get_user_positions, normalize_positions
 
 
 def build_wallet_snapshot(wallets):
-    """
-    Pulls all wallet positions and flattens them into a unified structure.
-    """
     all_positions = []
 
     for w in wallets:
@@ -20,18 +17,10 @@ def build_wallet_snapshot(wallets):
 
 
 def compute_consensus(positions, wallet_count):
-    """
-    Returns consensus by market:
-    - YES count
-    - NO count
-    - total size
-    - wallets involved
-    """
 
     markets = defaultdict(lambda: {
         "YES": set(),
         "NO": set(),
-        "size": 0,
         "wallets": set()
     })
 
@@ -42,7 +31,6 @@ def compute_consensus(positions, wallet_count):
 
         markets[market][side].add(wallet)
         markets[market]["wallets"].add(wallet)
-        markets[market]["size"] += p["size"]
 
     results = []
 
@@ -51,8 +39,7 @@ def compute_consensus(positions, wallet_count):
         no_count = len(data["NO"])
         total_wallets = len(data["wallets"])
 
-        # determine direction
-        if yes_count > no_count:
+        if yes_count >= no_count:
             direction = "YES"
             strength = yes_count / wallet_count
         else:
@@ -61,28 +48,19 @@ def compute_consensus(positions, wallet_count):
 
         results.append({
             "market": market,
-            "market_id": market,
             "direction": direction,
             "yes_count": yes_count,
             "no_count": no_count,
-            "wallet_coverage": total_wallets,
-            "strength": round(strength * 100, 1),
-            "total_size": f"{yes_count}/{wallet_count} wallets"
+            "wallet_count": total_wallets,
+            "strength": round(strength * 100, 1)
         })
 
-    # sort by strongest conviction
     results.sort(key=lambda x: x["strength"], reverse=True)
 
     return results
 
 
 def get_top_consensus(wallets_5, wallets_25):
-    """
-    Builds:
-    - 5-wallet consensus
-    - Top 25 consensus
-    """
-
     five_positions = build_wallet_snapshot(wallets_5)
     top_positions = build_wallet_snapshot(wallets_25)
 
