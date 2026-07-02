@@ -66,7 +66,7 @@ def compute_consensus(positions, wallet_count):
             "no_count": no_count,
             "wallet_coverage": total_wallets,
             "strength": round(strength * 100, 1),
-            "total_size": round(data["size"], 2)
+            "total_size": f"{yes_count}/{wallet_count} wallets"
         })
 
     # sort by strongest conviction
