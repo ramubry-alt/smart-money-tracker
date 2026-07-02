@@ -12,13 +12,13 @@ def format_report(five, top25):
 
     for m in five[:10]:
         if m["strength"] == 100:
-            lines.append(f"{m['market']} → {m['direction']} ({m['total_size']}$)")
+            lines.append(f"{m['market']} → {m['direction']} ({m['yes_count']}/5 wallets)")
 
     lines.append("\n⭐⭐⭐⭐ TOP 25 CONSENSUS\n")
 
     for m in top25[:15]:
         if m["strength"] >= 70:
-            lines.append(f"{m['market']} → {m['direction']} ({m['strength']}%)")
+            lines.append(f"{m['market']} → {m['direction']} ({m['yes_count']}/25 wallets)")
 
     return "\n".join(lines)
 
@@ -36,12 +36,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-if __name__ == "__main__":
-    print("Running Smart Money Tracker...")
-
-from wallets import WALLETS_5, TOP_25
-
-five, top25 = get_top_consensus(WALLETS_5, TOP_25)
-
-print("5 Wallet Consensus:", five)
-print("Top 25 Consensus:", top25)
