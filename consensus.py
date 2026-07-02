@@ -1,21 +1,7 @@
 from collections import defaultdict
-import re
 from polymarket import get_user_positions, normalize_positions
 
 
-# ---------------------------
-# MARKET NORMALIZATION
-# ---------------------------
-def normalize_market_name(market):
-    market = market.lower().strip()
-    market = re.sub(r"[^a-z0-9\s]", "", market)
-    market = re.sub(r"\s+", " ", market)
-    return market
-
-
-# ---------------------------
-# WALLET SNAPSHOT
-# ---------------------------
 def build_wallet_snapshot(wallets):
     all_positions = []
 
@@ -30,73 +16,62 @@ def build_wallet_snapshot(wallets):
     return all_positions
 
 
-# ---------------------------
-# CORE CONSENSUS ENGINE
-# ---------------------------
 def compute_consensus(positions, wallet_count):
 
-    # FIRST LEVEL: strict canonical aggregation
     markets = {}
 
     for p in positions:
-        raw_market = p.get("market", "")
-        market = normalize_market_name(raw_market)
 
-        side = p.get("side", "YES").upper()
-        wallet = p.get("wallet")
+        market = p["market"]
+        outcome = p["side"].upper()
+        wallet = p["wallet"]
+        size = float(p.get("size", 0))
 
         if market not in markets:
             markets[market] = {
-                "YES": set(),
-                "NO": set(),
                 "wallets": set(),
-                "size": 0
+                "outcomes": defaultdict(set),
+                "volume": 0
             }
 
-        markets[market][side].add(wallet)
         markets[market]["wallets"].add(wallet)
-        markets[market]["size"] += float(p.get("size", 0) or 0)
+        markets[market]["outcomes"][outcome].add(wallet)
+        markets[market]["volume"] += size
 
-    # SECOND LEVEL: scoring
     results = []
 
     for market, data in markets.items():
-        yes_count = len(data["YES"])
-        no_count = len(data["NO"])
-        total_wallets = len(data["wallets"])
 
-        if wallet_count == 0:
-            continue
+        winning_outcome = None
+        winning_wallets = 0
 
-        direction = "YES" if yes_count >= no_count else "NO"
+        for outcome, wallets in data["outcomes"].items():
 
-        # more realistic scoring spread
-        agreement = max(yes_count, no_count) / wallet_count
-        participation = total_wallets / wallet_count
+            if len(wallets) > winning_wallets:
+                winning_wallets = len(wallets)
+                winning_outcome = outcome
 
-        strength = (
-            (agreement * 0.65) +
-            (participation * 0.35)
-        ) * 100
+        strength = round(100 * winning_wallets / wallet_count, 1)
 
         results.append({
             "market": market,
-            "direction": direction,
-            "yes_count": yes_count,
-            "no_count": no_count,
-            "wallet_count": total_wallets,
-            "strength": round(strength, 1)
+            "direction": winning_outcome,
+            "wallet_count": winning_wallets,
+            "strength": strength,
+            "volume": round(data["volume"], 2)
         })
 
-    # sort
-    results.sort(key=lambda x: x["strength"], reverse=True)
+    results.sort(
+        key=lambda x: (
+            x["strength"],
+            x["volume"]
+        ),
+        reverse=True
+    )
 
     return results
 
 
-# ---------------------------
-# ENTRY POINT
-# ---------------------------
 def get_top_consensus(wallets_5, wallets_25):
 
     five_positions = build_wallet_snapshot(wallets_5)
