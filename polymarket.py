@@ -1,73 +1,69 @@
 import requests
+from datetime import datetime, timezone
 
-BASE_URL = "https://gamma-api.polymarket.com"
+BASE_URL = "https://data-api.polymarket.com"
 
 
 def get_user_positions(wallet_address):
+    """
+    Fetch CURRENT OPEN positions for a wallet.
+    """
     try:
-        url = f"{BASE_URL}/events?user={wallet_address}"
-        res = requests.get(url, timeout=10)
-        res.raise_for_status()
-        return res.json()
-    except Exception:
+        url = f"{BASE_URL}/positions"
+
+        params = {
+            "user": wallet_address,
+            "sizeThreshold": 1,
+            "limit": 500
+        }
+
+        r = requests.get(url, params=params, timeout=15)
+        r.raise_for_status()
+
+        return r.json()
+
+    except Exception as e:
+        print(f"Error fetching {wallet_address}: {e}")
         return []
 
 
 def normalize_positions(raw):
     positions = []
 
+    today = datetime.now(timezone.utc)
+
     for item in raw:
+
         try:
-            market = item.get("title") or item.get("question") or ""
-            market_lower = market.lower()
+            title = item.get("title", "").strip()
 
-            # ---------------------------
-            # FILTER 1: OLD MARKETS
-            # ---------------------------
-            if any(x in market_lower for x in ["2020", "2021", "2022"]):
+            if not title:
                 continue
 
-            # ---------------------------
-            # FILTER 2: SPORTS NOISE
-            # ---------------------------
-            if any(x in market_lower for x in [
-                "nba", "nfl", "mlb", "nhl",
-                "beat the spread", "points",
-                "touchdowns", "matchup",
-                "game", "week"
-            ]):
+            # Skip tiny positions
+            size = float(item.get("size", 0))
+
+            if size < 1:
                 continue
 
-            # ---------------------------
-            # FILTER 3: ENTERTAINMENT NOISE
-            # ---------------------------
-            if any(x in market_lower for x in [
-                "gross more than",
-                "opening weekend",
-                "box office"
-            ]) and "million" in market_lower:
-                continue
+            # Skip expired markets
+            end_date = item.get("endDate")
 
-            # ---------------------------
-            # SIZE CALCULATION
-            # ---------------------------
-            size = 0
+            if end_date:
+                try:
+                    end = datetime.fromisoformat(
+                        end_date.replace("Z", "+00:00")
+                    )
 
-            if isinstance(item.get("outcomePositions"), list):
-                for op in item["outcomePositions"]:
-                    try:
-                        size += float(op.get("size", 0) or 0)
-                    except Exception:
-                        pass
+                    if end < today:
+                        continue
 
-            # ---------------------------
-            # SIDE NORMALIZATION
-            # ---------------------------
-            side = item.get("side") or item.get("outcome") or "YES"
+                except Exception:
+                    pass
 
             positions.append({
-                "market": market,
-                "side": str(side).upper(),
+                "market": title,
+                "side": item.get("outcome", "YES").upper(),
                 "size": round(size, 2)
             })
 
