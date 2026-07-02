@@ -21,29 +21,37 @@ def normalize_positions(raw):
 
     for item in raw:
         try:
-            market = item.get("title") or item.get("question") or "Unknown Market"
-
-            # 🔥 FIX: extract size from nested fields safely
-            size = (
-                item.get("size")
-                or item.get("amount")
-                or item.get("positionSize")
-                or item.get("value")
-                or 0
+            market = (
+                item.get("title")
+                or item.get("question")
+                or item.get("market", {}).get("question")
+                or "Unknown Market"
             )
 
-            # ensure numeric
-            try:
-                size = float(size)
-            except:
-                size = 0
+            # 🔥 REALISTIC SIZE EXTRACTION (Polymarket structure varies)
+            size = 0
 
-            side = item.get("side") or item.get("outcome") or "YES"
+            if isinstance(item.get("outcomePositions"), list):
+                for op in item["outcomePositions"]:
+                    size += float(op.get("size", 0) or 0)
+
+            elif item.get("size") is not None:
+                size = float(item.get("size") or 0)
+
+            elif item.get("amount") is not None:
+                size = float(item.get("amount") or 0)
+
+            # side detection
+            side = (
+                item.get("side")
+                or item.get("outcome")
+                or "YES"
+            )
 
             positions.append({
                 "market": market,
-                "side": side.upper(),
-                "size": size
+                "side": str(side).upper(),
+                "size": round(size, 2)
             })
 
         except Exception:
