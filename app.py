@@ -14,13 +14,13 @@ def format_report(five, top25):
     lines.append("⭐⭐⭐⭐⭐ 5-WALLET CONSENSUS\n")
 
     for m in five[:10]:
-        if m["strength"] == 100:
+        if m["strength"] >= 80:
             lines.append(f"{m['market']} → {m['direction']} ({m['yes_count']}/5 wallets)")
 
     lines.append("\n⭐⭐⭐⭐ TOP 25 CONSENSUS\n")
 
     for m in top25[:15]:
-        if m["strength"] >= 70:
+        if m["strength"] >= 60:
             lines.append(f"{m['market']} → {m['direction']} ({m['yes_count']}/25 wallets)")
 
     return "\n".join(lines)
