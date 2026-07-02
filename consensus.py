@@ -41,17 +41,10 @@ def compute_consensus(positions, wallet_count):
 
         if yes_count >= no_count:
             direction = "YES"
-            strength = yes_count / wallet_count
         else:
             direction = "NO"
-            strength = no_count / wallet_count
 
-        signal_score = (yes_count / wallet_count) * 100
-
-        # bonus: reward broad agreement
-        coverage_bonus = (total_wallets / wallet_count) * 10
-
-        final_score = signal_score + coverage_bonus
+        strength = (max(yes_count, no_count) / wallet_count) * 100
 
         results.append({
             "market": market,
@@ -59,9 +52,8 @@ def compute_consensus(positions, wallet_count):
             "yes_count": yes_count,
             "no_count": no_count,
             "wallet_count": total_wallets,
-            "strength": round(final_score, 1)
+            "strength": round(strength, 1)
         })
-
 
     results.sort(key=lambda x: x["strength"], reverse=True)
 
