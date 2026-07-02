@@ -11,6 +11,7 @@ def get_user_positions(wallet_address):
 
 def normalize_positions(raw_positions):
     """
-    Normalize Polymarket positions into standard format.
+    The mock data is already normalized.
+    Later we'll convert the real Polymarket API response here.
     """
-    return []
+    return raw_positions
