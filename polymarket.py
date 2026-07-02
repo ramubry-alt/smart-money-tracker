@@ -1,17 +1,48 @@
-# Placeholder Polymarket integration
-# (We will upgrade this to real API logic next)
+import requests
+
+BASE_URL = "https://gamma-api.polymarket.com"
+
 
 def get_user_positions(wallet_address):
-    return [
-        {"market": "BTC > 100k by 2026", "side": "YES", "size": 120},
-        {"market": "ETH ETF approved", "side": "YES", "size": 80},
-        {"market": "US recession 2026", "side": "NO", "size": 50}
-    ]
+    """
+    Fetch current positions from Polymarket API.
+    """
+    try:
+        url = f"{BASE_URL}/positions?user={wallet_address}"
+        res = requests.get(url, timeout=10)
+        res.raise_for_status()
+        return res.json()
+    except Exception:
+        return []
 
 
 def normalize_positions(raw_positions):
     """
-    The mock data is already normalized.
-    Later we'll convert the real Polymarket API response here.
+    Normalize Polymarket API response into:
+    { market, side, size }
     """
-    return raw_positions
+
+    normalized = []
+
+    for p in raw_positions:
+        try:
+            market = (
+                p.get("condition", {}).get("title")
+                or p.get("market", {}).get("question")
+                or "Unknown Market"
+            )
+
+            size = float(p.get("size", 0) or 0)
+
+            side = p.get("side") or p.get("position") or "YES"
+
+            normalized.append({
+                "market": market,
+                "side": side.upper(),
+                "size": size
+            })
+
+        except Exception:
+            continue
+
+    return normalized
