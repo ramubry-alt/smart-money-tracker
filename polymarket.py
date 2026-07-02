@@ -16,27 +16,29 @@ def get_user_positions(wallet_address):
     except Exception:
         return []
 
-
 def normalize_positions(raw):
-    """
-    Convert Polymarket event data into position-like structure.
-    """
-
     positions = []
 
     for item in raw:
         try:
-            market = item.get("title") or item.get("question") or "Unknown"
+            market = item.get("title") or item.get("question") or "Unknown Market"
 
-            # fallback logic (Polymarket structures vary)
-            size = float(
+            # 🔥 FIX: extract size from nested fields safely
+            size = (
                 item.get("size")
                 or item.get("amount")
+                or item.get("positionSize")
                 or item.get("value")
                 or 0
             )
 
-            side = item.get("side") or "YES"
+            # ensure numeric
+            try:
+                size = float(size)
+            except:
+                size = 0
+
+            side = item.get("side") or item.get("outcome") or "YES"
 
             positions.append({
                 "market": market,
