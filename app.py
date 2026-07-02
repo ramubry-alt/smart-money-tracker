@@ -31,6 +31,14 @@ def load_previous():
         with open(STATE_FILE, "r") as f:
             return json.load(f)
     return {}
+    def save_current(five, top25):
+    state = {
+        "five": [m["market"] for m in five],
+        "top25": [m["market"] for m in top25],
+    }
+
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
 
 def main():
     five, top25 = get_top_consensus(WALLETS_5, TOP_25)
