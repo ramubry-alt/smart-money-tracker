@@ -16,6 +16,13 @@ def build_wallet_snapshot(wallets):
     return all_positions
 
 
+def normalize_market_name(market):
+    """
+    Canonicalizes market names to reduce duplicates.
+    """
+    return market.strip().lower()
+
+
 def compute_consensus(positions, wallet_count):
 
     markets = defaultdict(lambda: {
@@ -26,7 +33,7 @@ def compute_consensus(positions, wallet_count):
     })
 
     for p in positions:
-        market = p["market"].strip()
+        market = normalize_market_name(p["market"])
         side = p["side"]
         wallet = p["wallet"]
 
@@ -41,20 +48,17 @@ def compute_consensus(positions, wallet_count):
         no_count = len(data["NO"])
         total_wallets = len(data["wallets"])
 
-        # avoid zero division safety
         if wallet_count == 0:
             continue
 
-        if yes_count >= no_count:
-            direction = "YES"
-            base_strength = yes_count / wallet_count
-        else:
-            direction = "NO"
-            base_strength = no_count / wallet_count
+        # directional confidence (not saturated)
+        direction = "YES" if yes_count >= no_count else "NO"
 
-        # improved scoring: reward breadth + participation
+        confidence = max(yes_count, no_count) / wallet_count
         breadth = total_wallets / wallet_count
-        strength = (base_strength * 0.7 + breadth * 0.3) * 100
+
+        # smoother scoring (prevents 100% flattening)
+        strength = (confidence * 0.6 + breadth * 0.4) * 100
 
         results.append({
             "market": market,
@@ -65,19 +69,21 @@ def compute_consensus(positions, wallet_count):
             "strength": round(strength, 1)
         })
 
-    # ---------------------------
-    # DEDUP + FINAL SORT
-    # ---------------------------
+    # sort
+    results.sort(key=lambda x: x["strength"], reverse=True)
+
+    # final dedup pass (safety layer)
     seen = set()
-    unique_results = []
+    unique = []
 
-    for r in sorted(results, key=lambda x: x["strength"], reverse=True):
-        if r["market"] in seen:
+    for r in results:
+        key = r["market"]
+        if key in seen:
             continue
-        seen.add(r["market"])
-        unique_results.append(r)
+        seen.add(key)
+        unique.append(r)
 
-    return unique_results
+    return unique
 
 
 def get_top_consensus(wallets_5, wallets_25):
