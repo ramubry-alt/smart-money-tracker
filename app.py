@@ -11,8 +11,19 @@ def format_report(five, top25):
     lines.append("🔥 NEW SINCE YESTERDAY\n")
     lines.append("No changes tracked in this version.\n")
 
-    # merge + rank everything
-    all_signals = five + top25
+    # Merge both lists and keep only the strongest version of each market
+    unique = {}
+
+    for signal in five + top25:
+        market = signal["market"]
+
+        if (
+            market not in unique
+            or signal["strength"] > unique[market]["strength"]
+        ):
+            unique[market] = signal
+
+    all_signals = list(unique.values())
     all_signals.sort(key=lambda x: x["strength"], reverse=True)
 
     top5 = all_signals[:5]
@@ -20,7 +31,9 @@ def format_report(five, top25):
     lines.append("⭐⭐⭐⭐⭐ TOP 5 CONVICTION SIGNALS\n")
 
     for m in top5:
-        lines.append(f"{m['market']} → {m['direction']} ({m['strength']}%)")
+        lines.append(
+            f"{m['market']} → {m['direction']} ({m['strength']}%)"
+        )
 
     return "\n".join(lines)
 
