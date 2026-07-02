@@ -1,16 +1,17 @@
 from collections import defaultdict
+import re
 from polymarket import get_user_positions, normalize_positions
 
 
 def build_wallet_snapshot(wallets):
     all_positions = []
 
-    for w in wallets:
-        raw = get_user_positions(w)
+    for wallet in wallets:
+        raw = get_user_positions(wallet)
         positions = normalize_positions(raw)
 
         for p in positions:
-            p["wallet"] = w
+            p["wallet"] = wallet
             all_positions.append(p)
 
     return all_positions
@@ -18,13 +19,20 @@ def build_wallet_snapshot(wallets):
 
 def normalize_market_name(market):
     """
-    Canonicalizes market names to reduce duplicates.
+    Strong canonicalization to prevent duplicates.
     """
-    return market.strip().lower()
+    market = market.lower().strip()
+
+    # remove punctuation
+    market = re.sub(r"[^a-z0-9\s]", "", market)
+
+    # normalize whitespace
+    market = re.sub(r"\s+", " ", market)
+
+    return market
 
 
 def compute_consensus(positions, wallet_count):
-
     markets = defaultdict(lambda: {
         "YES": set(),
         "NO": set(),
@@ -33,13 +41,15 @@ def compute_consensus(positions, wallet_count):
     })
 
     for p in positions:
-        market = normalize_market_name(p["market"])
-        side = p["side"]
-        wallet = p["wallet"]
+        raw_market = p.get("market", "")
+        market = normalize_market_name(raw_market)
+
+        side = p.get("side", "YES").upper()
+        wallet = p.get("wallet")
 
         markets[market][side].add(wallet)
         markets[market]["wallets"].add(wallet)
-        markets[market]["size"] += p.get("size", 0)
+        markets[market]["size"] += float(p.get("size", 0) or 0)
 
     results = []
 
@@ -51,13 +61,11 @@ def compute_consensus(positions, wallet_count):
         if wallet_count == 0:
             continue
 
-        # directional confidence (not saturated)
         direction = "YES" if yes_count >= no_count else "NO"
 
         confidence = max(yes_count, no_count) / wallet_count
         breadth = total_wallets / wallet_count
 
-        # smoother scoring (prevents 100% flattening)
         strength = (confidence * 0.6 + breadth * 0.4) * 100
 
         results.append({
@@ -69,21 +77,20 @@ def compute_consensus(positions, wallet_count):
             "strength": round(strength, 1)
         })
 
-    # sort
+    # sort by strength
     results.sort(key=lambda x: x["strength"], reverse=True)
 
-    # final dedup pass (safety layer)
+    # final dedup safety pass
     seen = set()
-    unique = []
+    unique_results = []
 
     for r in results:
-        key = r["market"]
-        if key in seen:
+        if r["market"] in seen:
             continue
-        seen.add(key)
-        unique.append(r)
+        seen.add(r["market"])
+        unique_results.append(r)
 
-    return unique
+    return unique_results
 
 
 def get_top_consensus(wallets_5, wallets_25):
