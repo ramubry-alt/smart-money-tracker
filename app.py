@@ -26,6 +26,11 @@ def format_report(five, top25):
 
     return "\n".join(lines)
 
+def load_previous():
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE, "r") as f:
+            return json.load(f)
+    return {}
 
 def main():
     five, top25 = get_top_consensus(WALLETS_5, TOP_25)
