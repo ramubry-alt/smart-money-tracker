@@ -20,8 +20,8 @@ def normalize_positions(raw):
         try:
             market = item.get("title") or item.get("question") or ""
 
-            # FILTER OUT OLD MARKETS
-            if any(year in market for year in ["2020", "2021", "2022"]):
+            # FILTER OUT OLD / NOISE MARKETS
+            if any(x in market for x in ["2020", "2021", "2022"]):
                 continue
 
             size = 0
