@@ -61,6 +61,7 @@ def compute_consensus(positions, wallet_count):
 
         results.append({
             "market": market,
+            "market_id": market,
             "direction": direction,
             "yes_count": yes_count,
             "no_count": no_count,
