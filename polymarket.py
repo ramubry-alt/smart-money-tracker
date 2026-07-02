@@ -21,7 +21,11 @@ def get_user_positions(wallet_address):
         r.raise_for_status()
 
         return r.json()
+        data = r.json()
 
+        print(data[:2])
+
+        return data
     except Exception as e:
         print(f"Error fetching {wallet_address}: {e}")
         return []
