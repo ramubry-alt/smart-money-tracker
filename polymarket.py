@@ -1,23 +1,23 @@
 import requests
 from collections import defaultdict
 
-# -----------------------------------------
-# CONFIG
-# -----------------------------------------
+# -------------------------------------------------
+# CONFIG (INDEXER LAYER)
+# -------------------------------------------------
 INDEXER_URL = "https://clob.polymarket.com"
 
 
-# -----------------------------------------
-# FETCH WALLET TRADE HISTORY (INDEXED DATA)
-# -----------------------------------------
+# -------------------------------------------------
+# FETCH WALLET FILL HISTORY (INDEXER STYLE)
+# -------------------------------------------------
 def get_user_positions(wallet_address):
     """
-    Pull indexed trade/fill data for a wallet.
+    Pull indexed fills/trades for a wallet.
 
-    This is the closest public approximation to true Polymarket positions.
+    This is the ONLY realistic way to reconstruct positions
+    without private API keys.
     """
 
-    # Try multiple realistic endpoints (indexer implementations vary)
     endpoints = [
         f"{INDEXER_URL}/fills?user={wallet_address}",
         f"{INDEXER_URL}/trades?user={wallet_address}",
@@ -34,67 +34,62 @@ def get_user_positions(wallet_address):
             data = res.json()
 
             if isinstance(data, list) and len(data) > 0:
-                print(f"\n✅ Using indexer endpoint: {url}")
-                print(f"Wallet {wallet_address} → {len(data)} records")
-
+                print(f"✅ INDEXER HIT: {wallet_address} → {len(data)} records")
                 return data
 
         except Exception:
             continue
 
-    print(f"\n⚠️ No indexed data found for wallet: {wallet_address}")
+    print(f"⚠️ No indexer data for wallet: {wallet_address}")
     return []
 
 
-# -----------------------------------------
-# NORMALIZE INTO POSITIONS
-# -----------------------------------------
+# -------------------------------------------------
+# NORMALIZE INTO POSITION EXPOSURE
+# -------------------------------------------------
 def normalize_positions(raw_trades):
     """
-    Convert trade history → aggregated positions.
-
-    We reconstruct exposure by summing:
-    (market + outcome side)
+    Converts raw fills → aggregated market exposure
     """
 
     positions = defaultdict(float)
 
-    for trade in raw_trades:
+    for t in raw_trades:
         try:
-            # -----------------------------
-            # MARKET IDENTIFICATION
-            # -----------------------------
+            # -------------------------
+            # MARKET NAME
+            # -------------------------
             market = (
-                trade.get("market")
-                or trade.get("title")
-                or trade.get("question")
-                or trade.get("event")
-                or "UNKNOWN MARKET"
+                t.get("market")
+                or t.get("title")
+                or t.get("question")
+                or t.get("event_title")
+                or "UNKNOWN"
             )
 
             if not market:
                 continue
 
-            # -----------------------------
-            # OUTCOME / SIDE
-            # -----------------------------
+            # -------------------------
+            # SIDE (YES / NO)
+            # -------------------------
             side = (
-                trade.get("side")
-                or trade.get("outcome")
-                or trade.get("token")
+                t.get("side")
+                or t.get("outcome")
+                or t.get("token")
                 or "YES"
             )
 
             side = str(side).upper()
 
-            # -----------------------------
-            # SIZE / NOTIONAL VALUE
-            # -----------------------------
+            # -------------------------
+            # SIZE (NOTIONAL / FILL)
+            # -------------------------
             size = (
-                trade.get("size")
-                or trade.get("amount")
-                or trade.get("quantity")
-                or trade.get("filled_size")
+                t.get("size")
+                or t.get("amount")
+                or t.get("filled_size")
+                or t.get("quantity")
                 or 0
             )
 
@@ -103,19 +98,18 @@ def normalize_positions(raw_trades):
             except:
                 size = 0.0
 
-            # ignore zero-size noise
             if size <= 0:
                 continue
 
             key = (market, side)
             positions[key] += size
 
-        except Exception:
+        except:
             continue
 
-    # -----------------------------------------
+    # -------------------------
     # FLATTEN OUTPUT
-    # -----------------------------------------
+    # -------------------------
     result = []
 
     for (market, side), size in positions.items():
