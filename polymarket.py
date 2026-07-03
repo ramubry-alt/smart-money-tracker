@@ -1,73 +1,77 @@
 import requests
-from datetime import datetime, timezone
 
-BASE_URL = "https://data-api.polymarket.com"
+BASE_URL = "https://gamma-api.polymarket.com"
 
 
 def get_user_positions(wallet_address):
     """
-    Fetch CURRENT OPEN positions for a wallet.
+    Pull raw positions from Polymarket API.
+    Also prints ONE sample record for debugging (first wallet only).
     """
     try:
-        url = f"{BASE_URL}/positions"
+        url = f"{BASE_URL}/events?user={wallet_address}"
+        res = requests.get(url, timeout=10)
+        res.raise_for_status()
 
-        params = {
-            "user": wallet_address,
-            "sizeThreshold": 1,
-            "limit": 500
-        }
+        data = res.json()
 
-        r = requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
-
-        return r.json()
-        data = r.json()
-
-        print(data[:2])
+        # Print sample only once per run (first wallet call)
+        if data:
+            print("\n========== SAMPLE API RECORD ==========")
+            print(data[0])
+            print("=======================================\n")
 
         return data
+
     except Exception as e:
-        print(f"Error fetching {wallet_address}: {e}")
+        print(f"API error for wallet {wallet_address}: {e}")
         return []
 
 
-def normalize_positions(raw):
+def normalize_positions(raw_positions):
+    """
+    Normalize Polymarket data into a consistent format.
+    We DO NOT assume field names — we extract safely.
+    """
+
     positions = []
 
-    today = datetime.now(timezone.utc)
-
-    for item in raw:
-
+    for item in raw_positions:
         try:
-            title = item.get("title", "").strip()
+            market = (
+                item.get("title")
+                or item.get("question")
+                or item.get("name")
+                or "Unknown Market"
+            )
 
-            if not title:
+            market_lower = market.lower()
+
+            # Filter out obviously stale markets
+            if any(x in market_lower for x in ["2020", "2021", "2022"]):
                 continue
 
-            # Skip tiny positions
-            size = float(item.get("size", 0))
+            # Extract side safely
+            side = item.get("side") or item.get("outcome") or "YES"
+            side = str(side).upper()
 
-            if size < 1:
-                continue
+            # Extract size safely (multiple possible API shapes)
+            size = 0.0
 
-            # Skip expired markets
-            end_date = item.get("endDate")
+            if isinstance(item.get("outcomePositions"), list):
+                for op in item["outcomePositions"]:
+                    try:
+                        size += float(op.get("size", 0) or 0)
+                    except:
+                        pass
 
-            if end_date:
-                try:
-                    end = datetime.fromisoformat(
-                        end_date.replace("Z", "+00:00")
-                    )
-
-                    if end < today:
-                        continue
-
-                except Exception:
-                    pass
+            # fallback if API uses different field
+            if size == 0:
+                size = float(item.get("size", 0) or 0)
 
             positions.append({
-                "market": title,
-                "side": item.get("outcome", "YES").upper(),
+                "market": market,
+                "side": side,
                 "size": round(size, 2)
             })
 
