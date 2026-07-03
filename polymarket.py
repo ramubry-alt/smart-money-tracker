@@ -1,81 +1,94 @@
 import requests
+from collections import defaultdict
 
-BASE_URL = "https://gamma-api.polymarket.com"
+CLOB_URL = "https://clob.polymarket.com"
 
 
+# ----------------------------
+# FETCH TRADES (CLOBBED DATA)
+# ----------------------------
 def get_user_positions(wallet_address):
     """
-    Try ONLY the correct Polymarket indexer-style endpoint pattern.
-    This avoids fake 'events' data.
+    Pull user fills/trades from CLOB API.
+    This is the ONLY reliable way to reconstruct exposure.
     """
 
-    url = f"{BASE_URL}/positions?user={wallet_address}"
+    url = f"{CLOB_URL}/trades?user={wallet_address}"
 
     try:
-        res = requests.get(url, timeout=10)
+        res = requests.get(url, timeout=15)
 
-        # If endpoint doesn't exist, fail fast (important)
         if res.status_code != 200:
-            print(f"❌ Bad response for {wallet_address}: {res.status_code}")
+            print(f"❌ CLOB error {res.status_code} for {wallet_address}")
             return []
 
         data = res.json()
 
-        print(f"\n✅ Positions fetched for wallet: {wallet_address}")
-        print(f"Count: {len(data) if isinstance(data, list) else 'N/A'}")
+        print(f"\n✅ Trades fetched for {wallet_address}: {len(data)} records")
 
         return data
 
     except Exception as e:
-        print(f"API error for {wallet_address}: {e}")
+        print(f"❌ CLOB request failed: {e}")
         return []
 
 
-def normalize_positions(raw_positions):
+# ----------------------------
+# NORMALIZE INTO POSITIONS
+# ----------------------------
+def normalize_positions(raw_trades):
     """
-    Extract REAL position structure as defensively as possible.
+    Convert trades → pseudo-positions.
+    We aggregate buys per market + side.
     """
 
-    positions = []
+    positions = defaultdict(float)
 
-    for item in raw_positions:
+    for trade in raw_trades:
         try:
             market = (
-                item.get("title")
-                or item.get("question")
-                or item.get("market")
-                or "UNKNOWN MARKET"
+                trade.get("market")
+                or trade.get("title")
+                or trade.get("question")
+                or "UNKNOWN"
             )
 
-            # Skip empty markets
-            if not market or market == "UNKNOWN MARKET":
-                continue
-
-            # Extract side safely
+            # side: YES / NO (or LONG / SHORT)
             side = (
-                item.get("outcome")
-                or item.get("side")
+                trade.get("side")
+                or trade.get("outcome")
                 or "YES"
             )
 
             side = str(side).upper()
 
-            # Extract size safely
-            size = 0.0
+            # size / notional
+            size = (
+                trade.get("size")
+                or trade.get("amount")
+                or trade.get("quantity")
+                or 0
+            )
 
-            if "size" in item:
-                try:
-                    size = float(item.get("size", 0))
-                except:
-                    size = 0.0
+            try:
+                size = float(size)
+            except:
+                size = 0.0
 
-            positions.append({
-                "market": market,
-                "side": side,
-                "size": round(size, 2)
-            })
+            key = (market, side)
+            positions[key] += size
 
         except:
             continue
 
-    return positions
+    # convert back to structured list
+    result = []
+
+    for (market, side), size in positions.items():
+        result.append({
+            "market": market,
+            "side": side,
+            "size": round(size, 4)
+        })
+
+    return result
