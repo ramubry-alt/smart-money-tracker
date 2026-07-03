@@ -6,33 +6,36 @@ BASE_URL = "https://gamma-api.polymarket.com"
 
 def get_user_positions(wallet_address):
     """
-    HARD DEBUG MODE:
-    Print EXACT raw API response so we can see real structure.
+    Try multiple possible Polymarket endpoints to find REAL wallet positions.
     """
 
-    try:
-        url = f"{BASE_URL}/events?user={wallet_address}"
-        res = requests.get(url, timeout=10)
-        res.raise_for_status()
+    endpoints = [
+        f"{BASE_URL}/positions?user={wallet_address}",
+        f"{BASE_URL}/portfolio?user={wallet_address}",
+        f"{BASE_URL}/user-positions?user={wallet_address}",
+        f"{BASE_URL}/events?user={wallet_address}",
+    ]
 
-        data = res.json()
+    for url in endpoints:
+        try:
+            res = requests.get(url, timeout=10)
+            if res.status_code != 200:
+                continue
 
-        print("\n================ RAW API DEBUG ================\n")
-        print(f"Wallet: {wallet_address}")
-        print(f"Type: {type(data)}")
-        print(f"Length: {len(data) if isinstance(data, list) else 'N/A'}")
+            data = res.json()
 
-        if isinstance(data, list) and len(data) > 0:
-            print("\n--- FIRST ITEM ---")
-            print(json.dumps(data[0], indent=2)[:3000])
+            if data and isinstance(data, list) and len(data) > 0:
+                print("\n================ WORKING ENDPOINT ================")
+                print(url)
+                print("=================================================\n")
 
-        print("\n===============================================\n")
+                return data
 
-        return data
+        except:
+            continue
 
-    except Exception as e:
-        print(f"API ERROR: {e}")
-        return []
+    print("No valid endpoint found.")
+    return []
 
 
 def normalize_positions(raw_positions):
