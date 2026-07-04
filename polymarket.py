@@ -50,14 +50,12 @@ def normalize_positions(raw, wallet):
             except Exception:
                 size = 0.0
 
-            positions.append(
-                {
-                    "wallet": wallet,
-                    "market": title,
-                    "side": side,
-                    "size": size,
-                }
-            )
+            positions.append({
+                "market": market,
+                "side": str(side).upper(),
+                "size": round(size, 2),
+                "wallet": item.get("proxyWallet") or item.get("walletAddress")
+            })
 
         except Exception:
             continue
