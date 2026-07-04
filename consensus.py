@@ -40,7 +40,11 @@ def get_top_consensus(wallets_5, wallets_25):
 def compute_consensus(positions, wallet_count):
     from collections import defaultdict
 
-    markets = defaultdict(lambda: {"YES": set(), "NO": set(), "size": 0, "wallets": set()})
+    markets = defaultdict(lambda: {
+        "YES": set(),
+        "NO": set(),
+        "size": 0,
+    })
 
     for p in positions:
 
@@ -49,7 +53,6 @@ def compute_consensus(positions, wallet_count):
             continue
 
         side = (p.get("side") or "YES").upper()
-        wallet = p.get("wallet")
 
         try:
             size = float(p.get("size", 0))
@@ -59,8 +62,7 @@ def compute_consensus(positions, wallet_count):
         if side not in ["YES", "NO"]:
             continue
 
-        markets[market][side].add(wallet)
-        markets[market]["wallets"].add(wallet)
+        markets[market][side].add(p.get("wallet"))
         markets[market]["size"] += size
 
     results = []
@@ -69,20 +71,21 @@ def compute_consensus(positions, wallet_count):
 
         yes_count = len(data["YES"])
         no_count = len(data["NO"])
-        total_wallets = len(data["wallets"])
 
-        if total_wallets == 0:
+        total_votes = yes_count + no_count
+
+        if total_votes == 0:
             continue
 
-        if yes_count >= no_count:
+        yes_pct = yes_count / total_votes
+        no_pct = no_count / total_votes
+
+        if yes_pct >= no_pct:
             direction = "YES"
-            agreement = yes_count
+            agreement_pct = yes_pct * 100
         else:
             direction = "NO"
-            agreement = no_count
-
-        # IMPORTANT FIX: normalize by ACTUAL participation, not full wallet set
-        agreement_pct = (agreement / total_wallets) * 100
+            agreement_pct = no_pct * 100
 
         results.append({
             "market": market,
