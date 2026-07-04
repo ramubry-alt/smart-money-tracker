@@ -99,7 +99,7 @@ for p in positions:
         "market": market,
         "direction": direction,
         "strength": round(strength, 1),
-        "volume": round(data["size"], 2)
+        "volume": round(data["size"], 2),
     })
 
 results.sort(key=lambda x: (x["strength"], x["volume"]), reverse=True)
