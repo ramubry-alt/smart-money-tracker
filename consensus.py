@@ -46,54 +46,62 @@ def compute_consensus(positions, wallet_count):
         "size": 0,
     })
 
-    for p in positions:
+    markets = defaultdict(lambda: {
+    "YES": set(),
+    "NO": set(),
+    "size": 0,
+})
 
-        market = (p.get("market") or "").strip()
-        if not market:
-            continue
+for p in positions:
 
-        side = (p.get("side") or "YES").upper()
+    market = (p.get("market") or "").strip()
+    if not market:
+        continue
 
-        try:
-            size = float(p.get("size", 0))
-        except Exception:
-            size = 0.0
+    side = (p.get("side") or "YES").upper()
+    wallet = p.get("wallet")
 
-        if side not in ["YES", "NO"]:
-            continue
+    if not wallet:
+        continue
 
-        markets[market][side].add(p.get("wallet"))
-        markets[market]["size"] += size
+    if side not in ["YES", "NO"]:
+        continue
 
+    markets[market][side].add(wallet)
+
+    try:
+        markets[market]["size"] += float(p.get("size", 0))
+    except:
+        pass
+        
     results = []
 
     for market, data in markets.items():
 
-        yes_count = len(data["YES"])
-        no_count = len(data["NO"])
+    yes_count = len(data["YES"])
+    no_count = len(data["NO"])
 
-        total_votes = yes_count + no_count
+    total = yes_count + no_count
+    if total == 0:
+        continue
 
-        if total_votes == 0:
-            continue
+    yes_pct = yes_count / total
+    no_pct = no_count / total
 
-        yes_pct = yes_count / total_votes
-        no_pct = no_count / total_votes
+    if yes_pct >= no_pct:
+        direction = "YES"
+        strength = yes_pct * 100
+    else:
+        direction = "NO"
+        strength = no_pct * 100
 
-        if yes_pct >= no_pct:
-            direction = "YES"
-            agreement_pct = yes_pct * 100
-        else:
-            direction = "NO"
-            agreement_pct = no_pct * 100
+    results.append({
+        "market": market,
+        "direction": direction,
+        "strength": round(strength, 1),
+        "volume": round(data["size"], 2)
+    })
 
-        results.append({
-            "market": market,
-            "direction": direction,
-            "strength": round(agreement_pct, 1),
-            "volume": round(data["size"], 2),
-        })
+results.sort(key=lambda x: (x["strength"], x["volume"]), reverse=True)
 
-    results.sort(key=lambda x: (x["strength"], x["volume"]), reverse=True)
-
-    return results[:10]
+return results[:10]
