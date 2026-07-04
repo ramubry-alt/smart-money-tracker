@@ -23,7 +23,7 @@ def get_user_positions(wallet_address):
         return []
 
 
-def normalize_positions(raw):
+def normalize_positions(raw, wallet=None):
 
     positions = []
 
@@ -33,7 +33,6 @@ def normalize_positions(raw):
         if not market:
             continue
 
-        size = 0
         try:
             size = float(item.get("size", 0))
         except:
@@ -41,11 +40,12 @@ def normalize_positions(raw):
 
         positions.append({
             "market": market,
-            "side": "YES",  # default fallback (Polymarket positions are directional but not cleanly labeled here)
+            "side": "YES",
             "size": size,
-            "wallet": item.get("proxyWallet")
+            "wallet": wallet or item.get("proxyWallet")
         })
 
+    return positions
     return positions
 
 def load_wallet(wallet):
