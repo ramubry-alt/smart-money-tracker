@@ -1,122 +1,40 @@
 import requests
-from collections import defaultdict
 
-# -------------------------------------------------
-# CONFIG (INDEXER LAYER)
-# -------------------------------------------------
-INDEXER_URL = "https://clob.polymarket.com"
+BASE_URL = "https://data-api.polymarket.com"
 
 
-# -------------------------------------------------
-# FETCH WALLET FILL HISTORY (INDEXER STYLE)
-# -------------------------------------------------
 def get_user_positions(wallet_address):
     """
-    Pull indexed fills/trades for a wallet.
-
-    This is the ONLY realistic way to reconstruct positions
-    without private API keys.
+    Fetch current positions for one wallet.
     """
 
-    endpoints = [
-        f"{INDEXER_URL}/fills?user={wallet_address}",
-        f"{INDEXER_URL}/trades?user={wallet_address}",
-        f"{INDEXER_URL}/history?user={wallet_address}",
-    ]
+    url = f"{BASE_URL}/positions?user={wallet_address}"
 
-    for url in endpoints:
-        try:
-            res = requests.get(url, timeout=15)
+    print(f"\nRequesting:")
+    print(url)
 
-            if res.status_code != 200:
-                continue
+    try:
+        response = requests.get(url, timeout=20)
 
-            data = res.json()
+        print(f"HTTP Status: {response.status_code}")
 
-            if isinstance(data, list) and len(data) > 0:
-                print(f"✅ INDEXER HIT: {wallet_address} → {len(data)} records")
-                return data
+        print("\nFirst 500 characters returned:")
+        print(response.text[:500])
 
-        except Exception:
-            continue
+        if response.status_code != 200:
+            return []
 
-    print(f"⚠️ No indexer data for wallet: {wallet_address}")
-    return []
+        return response.json()
+
+    except Exception as e:
+        print(e)
+        return []
 
 
-# -------------------------------------------------
-# NORMALIZE INTO POSITION EXPOSURE
-# -------------------------------------------------
-def normalize_positions(raw_trades):
+def normalize_positions(raw):
     """
-    Converts raw fills → aggregated market exposure
+    We are NOT parsing anything yet.
+    Just return the raw data unchanged.
     """
 
-    positions = defaultdict(float)
-
-    for t in raw_trades:
-        try:
-            # -------------------------
-            # MARKET NAME
-            # -------------------------
-            market = (
-                t.get("market")
-                or t.get("title")
-                or t.get("question")
-                or t.get("event_title")
-                or "UNKNOWN"
-            )
-
-            if not market:
-                continue
-
-            # -------------------------
-            # SIDE (YES / NO)
-            # -------------------------
-            side = (
-                t.get("side")
-                or t.get("outcome")
-                or t.get("token")
-                or "YES"
-            )
-
-            side = str(side).upper()
-
-            # -------------------------
-            # SIZE (NOTIONAL / FILL)
-            # -------------------------
-            size = (
-                t.get("size")
-                or t.get("amount")
-                or t.get("filled_size")
-                or t.get("quantity")
-                or 0
-            )
-
-            try:
-                size = float(size)
-            except:
-                size = 0.0
-
-            if size <= 0:
-                continue
-
-            key = (market, side)
-            positions[key] += size
-
-        except:
-            continue
-
-    # -------------------------
-    # FLATTEN OUTPUT
-    # -------------------------
-    result = []
-
-    for (market, side), size in positions.items():
-        result.append({
-            "market": market,
-            "side": side,
-            "size": round(size, 4)
-        })
-
-    return result
+    return raw
