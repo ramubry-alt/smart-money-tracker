@@ -38,14 +38,9 @@ def get_top_consensus(wallets_5, wallets_25):
 # ---------------------------------------------------------
 
 def compute_consensus(positions, wallet_count):
-    """
-    Groups identical markets and calculates:
-    - agreement %
-    - direction consensus
-    - total size (volume proxy)
-    """
+    from collections import defaultdict
 
-    markets = defaultdict(lambda: {"YES": set(), "NO": set(), "size": 0})
+    markets = defaultdict(lambda: {"YES": set(), "NO": set(), "size": 0, "wallets": set()})
 
     for p in positions:
 
@@ -61,11 +56,11 @@ def compute_consensus(positions, wallet_count):
         except Exception:
             size = 0.0
 
-        # normalize side
         if side not in ["YES", "NO"]:
             continue
 
         markets[market][side].add(wallet)
+        markets[market]["wallets"].add(wallet)
         markets[market]["size"] += size
 
     results = []
@@ -74,6 +69,10 @@ def compute_consensus(positions, wallet_count):
 
         yes_count = len(data["YES"])
         no_count = len(data["NO"])
+        total_wallets = len(data["wallets"])
+
+        if total_wallets == 0:
+            continue
 
         if yes_count >= no_count:
             direction = "YES"
@@ -82,18 +81,16 @@ def compute_consensus(positions, wallet_count):
             direction = "NO"
             agreement = no_count
 
-        agreement_pct = (agreement / wallet_count) * 100 if wallet_count else 0
+        # IMPORTANT FIX: normalize by ACTUAL participation, not full wallet set
+        agreement_pct = (agreement / total_wallets) * 100
 
-        results.append(
-            {
-                "market": market,
-                "direction": direction,
-                "strength": round(agreement_pct, 1),
-                "volume": round(data["size"], 2),
-            }
-        )
+        results.append({
+            "market": market,
+            "direction": direction,
+            "strength": round(agreement_pct, 1),
+            "volume": round(data["size"], 2),
+        })
 
-    # sort by strength then volume
     results.sort(key=lambda x: (x["strength"], x["volume"]), reverse=True)
 
     return results[:10]
