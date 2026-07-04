@@ -1,83 +1,99 @@
 from collections import defaultdict
-from polymarket import get_user_positions, normalize_positions
+from polymarket import load_wallet
 
 
-def build_wallet_snapshot(wallets):
-    all_positions = []
+# ---------------------------------------------------------
+# CORE ENGINE
+# ---------------------------------------------------------
 
-    for wallet in wallets:
-        raw = get_user_positions(wallet)
-        positions = normalize_positions(raw)
+def get_top_consensus(wallets_5, wallets_25):
+    """
+    Returns:
+        five_results, top25_results
+    """
 
-        for p in positions:
-            p["wallet"] = wallet
-            all_positions.append(p)
+    five_positions = []
+    top25_positions = []
 
-    return all_positions
+    # -----------------------------
+    # Load wallet positions
+    # -----------------------------
+    for w in wallets_5:
+        five_positions.extend(load_wallet(w))
 
+    for w in wallets_25:
+        top25_positions.extend(load_wallet(w))
+
+    # -----------------------------
+    # Compute consensus groups
+    # -----------------------------
+    five = compute_consensus(five_positions, len(wallets_5))
+    top25 = compute_consensus(top25_positions, len(wallets_25))
+
+    return five, top25
+
+
+# ---------------------------------------------------------
+# CONSENSUS CORE
+# ---------------------------------------------------------
 
 def compute_consensus(positions, wallet_count):
+    """
+    Groups identical markets and calculates:
+    - agreement %
+    - direction consensus
+    - total size (volume proxy)
+    """
 
-    markets = {}
+    markets = defaultdict(lambda: {"YES": set(), "NO": set(), "size": 0})
 
     for p in positions:
 
-        market = p["market"]
-        outcome = p["side"].upper()
-        wallet = p["wallet"]
-        size = float(p.get("size", 0))
+        market = (p.get("market") or "").strip()
+        if not market:
+            continue
 
-        if market not in markets:
-            markets[market] = {
-                "wallets": set(),
-                "outcomes": defaultdict(set),
-                "volume": 0
-            }
+        side = (p.get("side") or "YES").upper()
+        wallet = p.get("wallet")
 
-        markets[market]["wallets"].add(wallet)
-        markets[market]["outcomes"][outcome].add(wallet)
-        markets[market]["volume"] += size
+        try:
+            size = float(p.get("size", 0))
+        except Exception:
+            size = 0.0
+
+        # normalize side
+        if side not in ["YES", "NO"]:
+            continue
+
+        markets[market][side].add(wallet)
+        markets[market]["size"] += size
 
     results = []
 
     for market, data in markets.items():
 
-        winning_outcome = None
-        winning_wallets = 0
+        yes_count = len(data["YES"])
+        no_count = len(data["NO"])
 
-        for outcome, wallets in data["outcomes"].items():
+        if yes_count >= no_count:
+            direction = "YES"
+            agreement = yes_count
+        else:
+            direction = "NO"
+            agreement = no_count
 
-            if len(wallets) > winning_wallets:
-                winning_wallets = len(wallets)
-                winning_outcome = outcome
+        agreement_pct = (agreement / wallet_count) * 100 if wallet_count else 0
 
-        strength = round(100 * winning_wallets / wallet_count, 1)
+        results.append(
+            {
+                "market": market,
+                "direction": direction,
+                "strength": round(agreement_pct, 1),
+                "volume": round(data["size"], 2),
+            }
+        )
 
-        results.append({
-            "market": market,
-            "direction": winning_outcome,
-            "wallet_count": winning_wallets,
-            "strength": strength,
-            "volume": round(data["volume"], 2)
-        })
+    # sort by strength then volume
+    results.sort(key=lambda x: (x["strength"], x["volume"]), reverse=True)
 
-    results.sort(
-        key=lambda x: (
-            x["strength"],
-            x["volume"]
-        ),
-        reverse=True
-    )
-
-    return results
-
-
-def get_top_consensus(wallets_5, wallets_25):
-
-    five_positions = build_wallet_snapshot(wallets_5)
-    top_positions = build_wallet_snapshot(wallets_25)
-
-    five = compute_consensus(five_positions, len(wallets_5))
-    top25 = compute_consensus(top_positions, len(wallets_25))
-
-    return five, top25
+    return results[:10]
