@@ -5,21 +5,13 @@ BASE_URL = "https://data-api.polymarket.com"
 
 def get_user_positions(wallet_address):
     """
-    Fetch current positions for one wallet.
+    Downloads every open position for one wallet.
     """
 
     url = f"{BASE_URL}/positions?user={wallet_address}"
 
-    print(f"\nRequesting:")
-    print(url)
-
     try:
         response = requests.get(url, timeout=20)
-
-        print(f"HTTP Status: {response.status_code}")
-
-        print("\nFirst 500 characters returned:")
-        print(response.text[:500])
 
         if response.status_code != 200:
             return []
@@ -31,10 +23,53 @@ def get_user_positions(wallet_address):
         return []
 
 
-def normalize_positions(raw):
+def normalize_positions(raw, wallet):
     """
-    We are NOT parsing anything yet.
-    Just return the raw data unchanged.
+    Convert Polymarket API output into one standard format.
     """
 
-    return raw
+    positions = []
+
+    for p in raw:
+
+        try:
+
+            title = p.get("title", "").strip()
+
+            if not title:
+                continue
+
+            side = str(
+                p.get("side")
+                or p.get("outcome")
+                or "YES"
+            ).upper()
+
+            try:
+                size = float(p.get("size", 0))
+            except Exception:
+                size = 0.0
+
+            positions.append(
+                {
+                    "wallet": wallet,
+                    "market": title,
+                    "side": side,
+                    "size": size,
+                }
+            )
+
+        except Exception:
+            continue
+
+    return positions
+
+
+def load_wallet(wallet):
+    """
+    Convenience wrapper.
+    """
+
+    raw = get_user_positions(wallet)
+
+    return normalize_positions(raw, wallet)
