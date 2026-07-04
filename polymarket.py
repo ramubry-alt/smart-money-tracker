@@ -23,45 +23,30 @@ def get_user_positions(wallet_address):
         return []
 
 
-def normalize_positions(raw, wallet):
-    """
-    Convert Polymarket API output into one standard format.
-    """
+def normalize_positions(raw):
 
     positions = []
 
-    for p in raw:
+    for item in raw:
 
-        try:
-
-            title = p.get("title", "").strip()
-
-            if not title:
-                continue
-
-            side = str(
-                p.get("side")
-                or p.get("outcome")
-                or "YES"
-            ).upper()
-
-            try:
-                size = float(p.get("size", 0))
-            except Exception:
-                size = 0.0
-
-            positions.append({
-                "market": market,
-                "side": str(side).upper(),
-                "size": round(size, 2),
-                "wallet": item.get("proxyWallet") or item.get("walletAddress")
-            })
-
-        except Exception:
+        market = item.get("title") or item.get("question") or ""
+        if not market:
             continue
 
-    return positions
+        size = 0
+        try:
+            size = float(item.get("size", 0))
+        except:
+            size = 0
 
+        positions.append({
+            "market": market,
+            "side": "YES",  # default fallback (Polymarket positions are directional but not cleanly labeled here)
+            "size": size,
+            "wallet": item.get("proxyWallet")
+        })
+
+    return positions
 
 def load_wallet(wallet):
     """
