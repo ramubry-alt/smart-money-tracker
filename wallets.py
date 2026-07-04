@@ -1,3 +1,13 @@
+"""
+wallets.py
+
+Lists of Polymarket wallets used for consensus tracking.
+"""
+
+# -------------------------------------------------------------------
+# ELITE SMART MONEY (Top 5)
+# -------------------------------------------------------------------
+
 WALLETS_5 = [
     "0x0346afae2603313d2bbee96b628536c8cbe352a5",
     "0x9f2fe025f84839ca81dd8e0338892605702d2ca8",
@@ -6,12 +16,26 @@ WALLETS_5 = [
     "0xe9a6ed2e4d4ee8ce47cd47cac834746dc4cf627b",
 ]
 
+
+# -------------------------------------------------------------------
+# BROADER SMART MONEY (Top 25)
+#
+# Includes the Top 5 automatically.
+# Do NOT remove the first five addresses.
+# -------------------------------------------------------------------
+
 TOP_25 = [
+
+    # ----- Elite Five -----
+
     "0x0346afae2603313d2bbee96b628536c8cbe352a5",
     "0x9f2fe025f84839ca81dd8e0338892605702d2ca8",
     "0x095fbca2e0eaf0c9841005135427e1e0117190b2",
     "0xfea31bc088000ff909be1dfd8d0e3f2c7ef2d227",
     "0xe9a6ed2e4d4ee8ce47cd47cac834746dc4cf627b",
+
+    # ----- Remaining 20 -----
+
     "0x204f72f35326db932158cba6adff0b9a1da95e14",
     "0x7c1ee865a785de4c00ee90ed86a38489fb8bbab3",
     "0x709e8dcb133555794decc598e07f2c923b8366f5",
@@ -32,5 +56,4 @@ TOP_25 = [
     "0xdd882a70680633a75516f6ed5fce443e2d96dadb",
     "0x7d787c72c8317046fda90814a93c87fc192529a5",
     "0x4bff30af91642dc7d2b19a8664378fe55c45fc26",
-    # add more wallets here until you reach 25 total
 ]
