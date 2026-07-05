@@ -16,7 +16,11 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: pip install requests pandas python-dotenv
+        run: pip install -r requirements.txt
 
       - name: Run app
+        env:
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_APP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
         run: python app.py
