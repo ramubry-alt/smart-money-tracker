@@ -28,7 +28,10 @@ def normalize_positions(raw, wallet=None):
     positions = []
 
     for item in raw:
-
+        print("\nFIELDS:")
+        print(item.keys())
+        break
+        
         market = item.get("title") or item.get("question") or ""
         if not market:
             continue
