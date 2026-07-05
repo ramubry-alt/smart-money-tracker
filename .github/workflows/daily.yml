@@ -3,6 +3,12 @@ name: Smart Money Daily Email
 on:
   workflow_dispatch:
 
+  schedule:
+    # GitHub cron uses UTC.
+    # During Mountain Daylight Time, these are about:
+    # 7:00 AM, 1:00 PM, and 7:00 PM Mountain Time.
+    - cron: "0 13,19,1 * * *"
+
 jobs:
   run:
     runs-on: ubuntu-latest
