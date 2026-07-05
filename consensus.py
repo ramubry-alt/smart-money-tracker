@@ -2,42 +2,21 @@ from collections import defaultdict
 from polymarket import load_wallet
 
 
-# ---------------------------------------------------------
-# CORE ENGINE
-# ---------------------------------------------------------
-
 def get_top_consensus(wallets_5, wallets_25):
-    """
-    Returns:
-        five_results, top25_results
-    """
-
     five_positions = []
     top25_positions = []
 
-    # -----------------------------
-    # Load wallet positions
-    # -----------------------------
     for w in wallets_5:
         five_positions.extend(load_wallet(w))
 
     for w in wallets_25:
         top25_positions.extend(load_wallet(w))
 
-    # -----------------------------
-    # Compute consensus groups
-    # -----------------------------
     five = compute_consensus(five_positions, len(wallets_5))
     top25 = compute_consensus(top25_positions, len(wallets_25))
 
     return five, top25
 
-
-# ---------------------------------------------------------
-# CONSENSUS CORE
-# ---------------------------------------------------------
-
-from collections import defaultdict
 
 def compute_consensus(positions, wallet_count):
 
@@ -47,11 +26,7 @@ def compute_consensus(positions, wallet_count):
         "size": 0.0
     })
 
-    # -------------------------
-    # BUILD MARKET STRUCTURE
-    # -------------------------
     for p in positions:
-
         market = (p.get("market") or "").strip()
         if not market:
             continue
@@ -69,40 +44,39 @@ def compute_consensus(positions, wallet_count):
 
         try:
             markets[market]["size"] += float(p.get("size", 0))
-        except:
+        except Exception:
             pass
 
-    # -------------------------
-    # SCORE CONSENSUS
-    # -------------------------
     results = []
 
     for market, data in markets.items():
-
         yes_count = len(data["YES"])
         no_count = len(data["NO"])
 
-        total = yes_count + no_count
-        if total == 0:
+        if yes_count == 0 and no_count == 0:
             continue
 
-        yes_pct = yes_count / total
-        no_pct = no_count / total
-
-        if yes_pct >= no_pct:
+        if yes_count >= no_count:
             direction = "YES"
-            strength = yes_pct * 100
+            winning_count = yes_count
         else:
             direction = "NO"
-            strength = no_pct * 100
+            winning_count = no_count
+
+        strength = (winning_count / wallet_count) * 100
+        participating_wallets = len(data["YES"] | data["NO"])
 
         results.append({
             "market": market,
             "direction": direction,
             "strength": round(strength, 1),
-            "volume": round(data["size"], 2)
+            "volume": round(data["size"], 2),
+            "wallets": participating_wallets,
+            "total_wallets": wallet_count,
+            "yes_count": yes_count,
+            "no_count": no_count,
         })
 
-    results.sort(key=lambda x: (x["strength"], x["volume"]), reverse=True)
+    results.sort(key=lambda x: (x["strength"], x["wallets"], x["volume"]), reverse=True)
 
     return results[:10]
