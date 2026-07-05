@@ -25,20 +25,9 @@ def get_user_positions(wallet_address):
 
 def normalize_positions(raw, wallet=None):
 
-    print("\n========== FIRST POSITION ==========\n")
-
-    if raw:
-        from pprint import pprint
-        pprint(raw[0])
-
-    print("\n====================================\n")
-
     positions = []
 
     for item in raw:
-        print("\nFIELDS:")
-        print(item.keys())
-        break
         
         market = item.get("title") or item.get("question") or ""
         if not market:
