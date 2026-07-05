@@ -1,4 +1,5 @@
 import json
+from datetime import date, datetime
 from urllib.request import Request
 from urllib.request import urlopen
 
@@ -19,7 +20,11 @@ def get_user_positions(wallet_address):
 
     try:
         if requests is not None:
-            response = requests.get(url, timeout=20)
+            response = requests.get(
+                url,
+                timeout=20,
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
 
             if response.status_code != 200:
                 return []
@@ -39,9 +44,36 @@ def get_user_positions(wallet_address):
         return []
 
 
+def parse_date(value):
+    if not value:
+        return None
+
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
+    except Exception:
+        return None
+
+
+def is_active_market(item):
+    """
+    Removes expired or redeemable markets.
+    """
+
+    if item.get("redeemable") is True:
+        return False
+
+    end_date = parse_date(item.get("endDate"))
+
+    if end_date is not None and end_date < date.today():
+        return False
+
+    return True
+
+
 def is_quality_market(market, item=None):
     market_lower = market.lower()
     item = item or {}
+
     slug_text = " ".join([
         str(item.get("slug") or ""),
         str(item.get("eventSlug") or ""),
@@ -79,6 +111,9 @@ def normalize_positions(raw, wallet=None):
 
     for item in raw:
         try:
+            if not is_active_market(item):
+                continue
+
             market = (
                 item.get("title")
                 or item.get("question")
