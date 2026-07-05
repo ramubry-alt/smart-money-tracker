@@ -1,6 +1,16 @@
 from datetime import datetime
 
 
+def format_agreement(m):
+    wallets = m.get("wallets")
+    total_wallets = m.get("total_wallets")
+
+    if wallets is not None and total_wallets is not None:
+        return f"{m['strength']}% ({wallets} of {total_wallets} wallets)"
+
+    return f"{m['strength']}%"
+
+
 def build_report(five, top25):
     lines = []
 
@@ -21,7 +31,7 @@ def build_report(five, top25):
     for i, m in enumerate(five, 1):
         lines.append(f"{i}. {m['market']}")
         lines.append(f"   Pick: {m['direction']}")
-        lines.append(f"   Agreement: {m['strength']}%")
+        lines.append(f"   Agreement: {format_agreement(m)}")
         lines.append(f"   Volume: ${m['volume']:,}")
         lines.append("")
 
@@ -33,7 +43,7 @@ def build_report(five, top25):
     for i, m in enumerate(top25, 1):
         lines.append(f"{i}. {m['market']}")
         lines.append(f"   Pick: {m['direction']}")
-        lines.append(f"   Agreement: {m['strength']}%")
+        lines.append(f"   Agreement: {format_agreement(m)}")
         lines.append(f"   Volume: ${m['volume']:,}")
         lines.append("")
 
