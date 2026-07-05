@@ -25,47 +25,21 @@ def get_user_positions(wallet_address):
 
 def normalize_positions(raw, wallet=None):
 
-    positions = []
+    from pprint import pprint
 
-    for item in raw:
-        
-        market = item.get("title") or item.get("question") or ""
-        if not market:
-            continue
+    print("\n====================================")
+    print("FIRST POSITION RETURNED BY POLYMARKET")
+    print("====================================\n")
 
-        # --------------------------
-        # REAL SIDE DETECTION
-        # --------------------------
-        side = "YES"
+    if len(raw) > 0:
+        pprint(raw[0])
+    else:
+        print("No positions returned.")
 
-        if isinstance(item.get("outcomePositions"), list):
+    # Stop the program immediately
+    raise SystemExit
 
-            # pick largest outcome position as direction proxy
-            best_size = 0
-
-            for op in item["outcomePositions"]:
-                try:
-                    size = float(op.get("size", 0))
-                except:
-                    size = 0
-
-                if size > best_size:
-                    best_size = size
-                    side = op.get("outcome") or "YES"
-
-        try:
-            size = float(item.get("size", 0))
-        except:
-            size = 0
-
-        positions.append({
-            "market": market,
-            "side": str(side).upper(),
-            "size": size,
-            "wallet": wallet or item.get("proxyWallet")
-        })
-
-    return positions
+  
     
 def load_wallet(wallet):
     """
