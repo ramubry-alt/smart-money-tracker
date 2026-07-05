@@ -1,4 +1,11 @@
-import requests
+import json
+from urllib.request import Request
+from urllib.request import urlopen
+
+try:
+    import requests
+except ImportError:
+    requests = None
 
 BASE_URL = "https://data-api.polymarket.com"
 
@@ -11,36 +18,114 @@ def get_user_positions(wallet_address):
     url = f"{BASE_URL}/positions?user={wallet_address}"
 
     try:
-        response = requests.get(url, timeout=20)
+        if requests is not None:
+            response = requests.get(url, timeout=20)
 
-        if response.status_code != 200:
-            return []
+            if response.status_code != 200:
+                return []
 
-        return response.json()
+            return response.json()
+
+        request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+
+        with urlopen(request, timeout=20) as response:
+            if response.status != 200:
+                return []
+
+            return json.loads(response.read().decode("utf-8"))
 
     except Exception as e:
         print(e)
         return []
 
 
+def is_quality_market(market, item=None):
+    market_lower = market.lower()
+    item = item or {}
+    slug_text = " ".join([
+        str(item.get("slug") or ""),
+        str(item.get("eventSlug") or ""),
+        str(item.get("icon") or ""),
+    ]).lower()
+
+    if len(market.strip()) < 15:
+        return False
+
+    if any(x in market_lower for x in ["2020", "2021", "2022"]):
+        return False
+
+    if any(x in market_lower for x in [
+        "beat the spread",
+    ]):
+        return False
+
+    if any(x in slug_text for x in [
+        "test-market",
+    ]):
+        return False
+
+    if any(x in market_lower for x in [
+        "gross more than",
+        "opening weekend",
+        "box office",
+    ]) and "million" in market_lower:
+        return False
+
+    return True
+
+
 def normalize_positions(raw, wallet=None):
+    positions = []
 
-    from pprint import pprint
+    for item in raw:
+        try:
+            market = (
+                item.get("title")
+                or item.get("question")
+                or item.get("market")
+                or item.get("eventTitle")
+                or ""
+            ).strip()
 
-    print("\n====================================")
-    print("FIRST POSITION RETURNED BY POLYMARKET")
-    print("====================================\n")
+            if not market:
+                continue
 
-    if len(raw) > 0:
-        pprint(raw[0])
-    else:
-        print("No positions returned.")
+            if not is_quality_market(market, item):
+                continue
 
-    # Stop the program immediately
-    raise SystemExit
+            side = (
+                item.get("side")
+                or item.get("outcome")
+                or item.get("outcomeName")
+                or "YES"
+            )
+            side = str(side).upper()
 
-  
-    
+            if side not in ["YES", "NO"]:
+                continue
+
+            size = (
+                item.get("currentValue")
+                or item.get("initialValue")
+                or item.get("size")
+                or item.get("value")
+                or item.get("amount")
+                or 0
+            )
+
+            positions.append({
+                "market": market,
+                "side": side,
+                "size": round(float(size or 0), 2),
+                "wallet": wallet,
+            })
+
+        except Exception:
+            continue
+
+    return positions
+
+
 def load_wallet(wallet):
     """
     Convenience wrapper.
