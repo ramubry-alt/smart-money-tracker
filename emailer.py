@@ -4,6 +4,10 @@ from config import EMAIL_FROM, EMAIL_TO, EMAIL_APP_PASSWORD, SMTP_SERVER, SMTP_P
 
 
 def send_email(subject: str, body: str):
+    if not EMAIL_APP_PASSWORD:
+        print("Email failed: EMAIL_APP_PASSWORD is not set.")
+        return
+
     msg = MIMEText(body)
     msg["Subject"] = subject
     msg["From"] = EMAIL_FROM
