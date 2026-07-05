@@ -33,6 +33,26 @@ def normalize_positions(raw, wallet=None):
         if not market:
             continue
 
+        # --------------------------
+        # REAL SIDE DETECTION
+        # --------------------------
+        side = "YES"
+
+        if isinstance(item.get("outcomePositions"), list):
+
+            # pick largest outcome position as direction proxy
+            best_size = 0
+
+            for op in item["outcomePositions"]:
+                try:
+                    size = float(op.get("size", 0))
+                except:
+                    size = 0
+
+                if size > best_size:
+                    best_size = size
+                    side = op.get("outcome") or "YES"
+
         try:
             size = float(item.get("size", 0))
         except:
@@ -40,14 +60,13 @@ def normalize_positions(raw, wallet=None):
 
         positions.append({
             "market": market,
-            "side": "YES",
+            "side": str(side).upper(),
             "size": size,
             "wallet": wallet or item.get("proxyWallet")
         })
 
     return positions
-    return positions
-
+    
 def load_wallet(wallet):
     """
     Convenience wrapper.
